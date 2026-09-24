@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lunavault — saved post organizer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌙</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#050611;
+    --void-2:#090b18;
+    --panel:#0f1226;
+    --panel-2:#171b38;
+    --panel-3:#1f2444;
+    --lunar:#d7dae9;
+    --dust-dim:#8890b5;
+    --dust-faint:#585f84;
+    --glow:#a7b0f5;
+    --glow-soft:#7b84d6;
+    --glow-dim:#4c5590;
+    --gold:#eac988;
+    --gold-dim:#8a774f;
+    --line:rgba(199,203,224,.09);
+    --line-2:rgba(199,203,224,.18);
+    --line-3:rgba(199,203,224,.30);
+    --danger:#e08a8a;
+    --shadow-sm:0 2px 10px rgba(0,0,0,.35);
+    --shadow-lg:0 18px 46px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  html{ scroll-behavior:smooth; }
+  body{
+    background:
+      radial-gradient(1200px 700px at 85% -10%, rgba(122,132,214,.10), transparent 60%),
+      radial-gradient(900px 600px at -10% 30%, rgba(122,132,214,.06), transparent 55%),
+      linear-gradient(180deg, var(--void) 0%, var(--void-2) 100%);
+    background-attachment:fixed;
+    color:var(--lunar);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    position:relative;
+    overflow-x:hidden;
+  }
+  ::selection{ background:var(--glow-dim); color:#fff; }
+  ::-webkit-scrollbar{ width:11px; height:11px; }
+  ::-webkit-scrollbar-track{ background:var(--void); }
+  ::-webkit-scrollbar-thumb{ background:var(--panel-3); border-radius:8px; border:3px solid var(--void); }
+  ::-webkit-scrollbar-thumb:hover{ background:var(--glow-dim); }
+  :focus-visible{ outline:2px solid var(--glow); outline-offset:2px; border-radius:4px; }
+
+  /* ambient dust field */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      radial-gradient(1.5px 1.5px at 20% 30%, rgba(199,203,224,.45), transparent),
+      radial-gradient(1px 1px at 60% 70%, rgba(199,203,224,.35), transparent),
+      radial-gradient(1.5px 1.5px at 80% 20%, rgba(199,203,224,.3), transparent),
+      radial-gradient(1px 1px at 35% 85%, rgba(199,203,224,.25), transparent),
+      radial-gradient(1px 1px at 90% 60%, rgba(199,203,224,.25), transparent),
+      radial-gradient(1.5px 1.5px at 10% 65%, rgba(199,203,224,.25), transparent),
+      radial-gradient(1px 1px at 50% 10%, rgba(199,203,224,.3), transparent);
+    background-repeat:repeat;
+    background-size:600px 600px;
+    pointer-events:none;
+    z-index:0;
+    opacity:.5;
+  }
+  /* edge vignette for depth */
+  body::after{
+    content:"";
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    box-shadow:inset 0 0 180px rgba(0,0,0,.55);
+  }
+  .glow{
+    position:fixed; top:-280px; right:-200px;
+    width:640px; height:640px; border-radius:50%;
+    background:radial-gradient(circle, rgba(154,163,240,.22), rgba(154,163,240,.04) 45%, transparent 70%);
+    filter:blur(10px);
+    pointer-events:none; z-index:0;
+    animation:drift 26s ease-in-out infinite;
+  }
+  @keyframes drift{
+    0%,100%{ transform:translate(0,0); }
+    50%{ transform:translate(-30px, 40px); }
+  }
+  @media (prefers-reduced-motion: reduce){ .glow{ animation:none; } html{ scroll-behavior:auto; } }
+
+  .wrap{ position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:0 24px 80px; }
+
+  header{ padding:48px 0 30px; }
+  .word{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-style:italic;
+    font-size:clamp(32px, 5vw, 46px);
+    letter-spacing:.2px;
+    color:var(--lunar);
+    margin:0 0 8px;
+    text-shadow:0 0 40px rgba(167,176,245,.15);
+  }
+  .word span{ color:var(--gold); font-style:normal; }
+  .tagline{ color:var(--dust-dim); font-size:14.5px; margin:0 0 28px; max-width:46ch; line-height:1.55; }
+
+  /* connect card */
+  .card{
+    background:linear-gradient(160deg, var(--panel), var(--void-2));
+    border:1px solid var(--line-2);
+    border-radius:16px;
+    padding:30px;
+    box-shadow:var(--shadow-lg);
+  }
+  .card h2{
+    font-family:'Fraunces', serif; font-weight:500; font-size:21px; margin:0 0 8px; color:var(--lunar);
+  }
+  .card p.hint{ color:var(--dust-dim); font-size:13.5px; line-height:1.65; margin:0 0 22px; }
+  .field{ margin-bottom:18px; }
+  .field label{ display:block; font-size:12.5px; color:var(--dust-dim); margin-bottom:7px; font-weight:500; }
+  .field input{
+    width:100%; background:var(--void); border:1px solid var(--line-2); color:var(--lunar);
+    border-radius:9px; padding:11px 13px; font-size:14px; font-family:'Inter',sans-serif;
+    outline:none; transition:border-color .15s, box-shadow .15s;
+  }
+  .field input:focus{ border-color:var(--glow); box-shadow:0 0 0 3px rgba(167,176,245,.14); }
+  .field .sub{ color:var(--dust-dim); font-size:11.5px; margin-top:6px; line-height:1.5; }
+  .field .sub a{ color:var(--glow); text-decoration:none; border-bottom:1px solid var(--glow-dim); }
+
+  button{
+    font-family:'Inter',sans-serif; cursor:pointer; border:none; border-radius:9px;
+    font-size:14px; font-weight:600; padding:11px 20px; transition:filter .15s, transform .08s, border-color .15s, background .15s, color .15s;
+  }
+  button:active{ transform:scale(.97); }
+  .btn-primary{ background:linear-gradient(160deg, #b4bcf8, var(--glow)); color:#0a0d1f; box-shadow:0 6px 18px rgba(122,132,214,.28); }
+  .btn-primary:hover{ filter:brightness(1.08); }
+  .btn-primary:disabled{ opacity:.45; cursor:default; box-shadow:none; }
+  .btn-ghost{ background:var(--panel-2); border:1px solid var(--line-2); color:var(--lunar); }
+  .btn-ghost:hover{ border-color:var(--glow); color:var(--glow); background:var(--panel-3); }
+  .btn-danger{ background:transparent; border:1px solid rgba(224,138,138,.35); color:var(--danger); }
+  .btn-danger:hover{ background:rgba(224,138,138,.1); }
+  .btn-small{ padding:7px 13px; font-size:12.5px; }
+
+  .error-box{
+    background:rgba(224,138,138,.08); border:1px solid rgba(224,138,138,.3);
+    color:var(--danger); border-radius:9px; padding:13px 15px; font-size:13px; margin-bottom:18px;
+  }
+
+  /* tabs */
+  .tabs{ display:flex; gap:8px; margin-bottom:28px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:5px; width:fit-content; }
+  .tab-btn{
+    background:transparent; border:1px solid transparent; color:var(--dust-dim);
+    border-radius:10px; padding:9px 18px; font-size:13.5px; font-weight:600;
+  }
+  .tab-btn.active{ background:var(--panel-3); color:var(--lunar); box-shadow:inset 0 0 0 1px var(--line-3); }
+  .tab-btn:not(.active):hover{ color:var(--lunar); }
+
+  /* story saver cards */
+  .story-media{
+    width:100%; max-height:220px; object-fit:contain; border-radius:9px;
+    background:var(--void); display:block;
+  }
+
+  /* app shell */
+  #app{ display:none; }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    flex-wrap:wrap; margin-bottom:22px;
+  }
+  .who{ font-size:13px; color:var(--dust-dim); }
+  .who b{ color:var(--lunar); font-weight:600; }
+
+  .controls{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    padding:14px 16px; background:var(--panel); border:1px solid var(--line-2); border-radius:13px;
+    margin-bottom:22px;
+    position:sticky; top:14px; z-index:5;
+    box-shadow:var(--shadow-sm);
+    backdrop-filter:blur(10px);
+  }
+  .controls input[type=text]{
+    flex:1 1 200px; background:var(--void); border:1px solid var(--line-2); color:var(--lunar);
+    border-radius:8px; padding:9px 12px; font-size:13.5px; outline:none; transition:border-color .15s, box-shadow .15s;
+  }
+  .controls input[type=text]:focus{ border-color:var(--glow); box-shadow:0 0 0 3px rgba(167,176,245,.14); }
+  .controls select{
+    background:var(--void); border:1px solid var(--line-2); color:var(--lunar);
+    border-radius:8px; padding:9px 10px; font-size:13px; outline:none; cursor:pointer;
+  }
+  .controls select:hover{ border-color:var(--line-3); }
+  .chip-toggle{
+    display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:20px;
+    border:1px solid var(--line-2); font-size:13px; color:var(--dust-dim); cursor:pointer; user-select:none;
+    transition:border-color .15s, color .15s, background .15s;
+  }
+  .chip-toggle:hover{ border-color:var(--line-3); }
+  .chip-toggle.active{ border-color:var(--gold-dim); color:var(--gold); background:rgba(234,201,136,.08); }
+
+  .count-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:12.5px; color:var(--dust-dim); }
+  .count-row a{ color:var(--glow); cursor:pointer; text-decoration:none; border-bottom:1px solid var(--glow-dim); }
+  .count-row a:hover{ color:var(--lunar); }
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(310px,1fr)); gap:14px; }
+
+  .post{
+    background:linear-gradient(165deg, var(--panel), var(--panel) 60%, var(--void-2));
+    border:1px solid var(--line); border-radius:13px;
+    padding:17px 19px; display:flex; flex-direction:column; gap:10px;
+    transition:border-color .18s, transform .18s, box-shadow .18s;
+  }
+  .post:hover{ border-color:var(--line-3); transform:translateY(-2px); box-shadow:var(--shadow-sm); }
+  .post-meta{ display:flex; justify-content:space-between; align-items:baseline; font-size:12px; color:var(--dust-dim); }
+  .post-meta .sr{ color:var(--glow-soft); font-weight:600; }
+  .post-title{ font-size:15px; line-height:1.45; color:var(--lunar); margin:0; font-weight:500; }
+  .post-title a{ color:inherit; text-decoration:none; }
+  .post-title a:hover{ color:var(--glow); }
+  .post-snip{ font-size:13px; color:var(--dust-dim); line-height:1.55; margin:0; }
+  .post-tags{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tagchip{
+    font-size:11px; padding:3px 9px; border-radius:12px; background:var(--panel-3);
+    color:var(--dust-dim); border:1px solid var(--line-2);
+  }
+  .post-actions{ display:flex; gap:8px; align-items:center; margin-top:4px; flex-wrap:wrap; padding-top:10px; border-top:1px solid var(--line); }
+  .icon-btn{
+    background:transparent; border:1px solid var(--line-2); color:var(--dust-dim);
+    border-radius:8px; padding:7px 11px; font-size:12px; transition:border-color .15s, color .15s, background .15s;
+  }
+  .icon-btn:hover{ border-color:var(--glow); color:var(--glow); background:rgba(167,176,245,.06); }
+  .icon-btn.fav{ border-color:transparent; padding:7px 9px; }
+  .icon-btn.fav.on{ color:var(--gold); }
+  .icon-btn.fav:hover{ color:var(--gold); background:rgba(234,201,136,.08); }
+  .tag-input{
+    background:var(--void); border:1px solid var(--line-2); color:var(--lunar);
+    border-radius:7px; padding:6px 9px; font-size:11.5px; width:96px; outline:none; transition:border-color .15s;
+  }
+  .tag-input:focus{ border-color:var(--glow); }
+
+  .empty{
+    text-align:center; padding:70px 20px; color:var(--dust-dim);
+    background:var(--panel); border:1px dashed var(--line-2); border-radius:14px;
+  }
+  .empty .word{ font-size:30px; margin-bottom:12px; opacity:.7; }
+
+  footer{ text-align:center; margin-top:44px; color:var(--dust-faint); font-size:12px; }
+
+  @media (max-width:520px){
+    .wrap{ padding:0 16px 60px; }
+    header{ padding:34px 0 22px; }
+    .controls{ position:static; }
+  }
+
+  /* intro splash */
+  #splash{
+    position:fixed; inset:0; z-index:50; background:var(--void);
+    display:flex; align-items:center; justify-content:center;
+    transition:opacity .7s ease;
+  }
+  #splash video{ width:100%; height:100%; object-fit:cover; }
+  #splash.hide{ opacity:0; pointer-events:none; }
+  #skipIntro{
+    position:absolute; bottom:26px; right:26px;
+    background:rgba(15,18,38,.7); border:1px solid var(--line-2); color:var(--dust-dim);
+    border-radius:20px; padding:8px 16px; font-size:12.5px; backdrop-filter:blur(6px);
+  }
+  #skipIntro:hover{ color:var(--lunar); border-color:var(--glow); }
+  @media (prefers-reduced-motion: reduce){
+    #splash{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div id="splash">
+  <video id="introVid" autoplay muted playsinline>
+    <source src="lunavault_intro.mp4" type="video/mp4">
+  </video>
+  <button id="skipIntro">Skip intro</button>
+</div>
+<div class="glow"></div>
+<div class="wrap">
+
+  <header>
+    <p class="word">Luna<span>vault</span></p>
+    <p class="tagline">Your saves, sorted out of the pile. Search, tag, and keep what matters — everything stays in your browser.</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="reddit">Saved posts</button>
+    <button class="tab-btn" data-tab="story">Story saver</button>
+  </div>
+
+  <!-- ===================== REDDIT PANEL ===================== -->
+  <div id="panel-reddit">
+
+  <!-- CONNECT SCREEN -->
+  <div id="connect">
+    <div id="errorSlot"></div>
+    <div class="card">
+      <h2>Connect your Reddit account</h2>
+      <p class="hint">Lunavault talks to Reddit directly from your browser — nothing passes through a server. You'll need a free Reddit app to do it:</p>
+      <div class="field">
+        <label>1. Client ID</label>
+        <input id="clientId" type="text" placeholder="e.g. aBcD3fGhIjKlMn">
+        <div class="sub">Create one at <a href="https://www.reddit.com/prefs/apps" target="_blank" rel="noopener">reddit.com/prefs/apps</a> — choose type <b>installed app</b>, and set the redirect URI below.</div>
+      </div>
+      <div class="field">
+        <label>2. Redirect URI (paste this exact value into the Reddit app form)</label>
+        <input id="redirectUri" type="text" readonly>
+      </div>
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <button class="btn-primary" id="connectBtn">Connect with Reddit</button>
+        <button class="btn-ghost" id="skipBtn">Skip for now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP SCREEN -->
+  <div id="app">
+    <div class="topbar">
+      <span class="who" id="whoLine">Signed in as <b id="whoUser">—</b></span>
+      <div style="display:flex; gap:10px;">
+        <button class="btn-ghost btn-small" id="exportBtn">Export JSON</button>
+        <button class="btn-ghost btn-small" id="disconnectBtn">Disconnect</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <input type="text" id="search" placeholder="Search title, subreddit, or tag…">
+      <select id="subredditFilter"><option value="">All subreddits</option></select>
+      <select id="typeFilter">
+        <option value="">Posts &amp; comments</option>
+        <option value="post">Posts only</option>
+        <option value="comment">Comments only</option>
+      </select>
+      <select id="sortBy">
+        <option value="saved_desc">Newest saved</option>
+        <option value="saved_asc">Oldest saved</option>
+        <option value="score_desc">Top score</option>
+        <option value="subreddit">Subreddit A–Z</option>
+      </select>
+      <div class="chip-toggle" id="favToggle">★ Favorites only</div>
+    </div>
+
+    <div class="count-row">
+      <span id="countLabel">Loading saved items…</span>
+      <a id="loadMoreLink" style="display:none;">Load more from Reddit →</a>
+    </div>
+
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="emptyState" style="display:none;">
+      <p class="word">🌙</p>
+      <p>Nothing here yet. Try a different filter, or save something new on Reddit.</p>
+    </div>
+  </div>
+  </div><!-- /panel-reddit -->
+
+  <!-- ===================== STORY SAVER PANEL ===================== -->
+  <div id="panel-story" style="display:none;">
+    <div class="card" style="margin-bottom:22px;">
+      <h2>Story saver</h2>
+      <p class="hint">
+        There's no real "Instagram story downloader" to build honestly here — Instagram has no public API for stories,
+        and the tools that claim to do it work by replaying a logged-in session against private endpoints, which breaks
+        constantly and isn't something worth shipping. What actually works, statically, with no login and no scraping:
+        paste the <b>direct media link</b> of something you can already see (on desktop, right-click the photo or video
+        → <i>Copy image address</i> / <i>Copy video address</i>), and Lunavault will preview it and try to save it.
+      </p>
+      <div class="field">
+        <label>Direct media URL</label>
+        <input type="text" id="storyUrl" placeholder="https://scontent...cdninstagram.com/...">
+      </div>
+      <button class="btn-primary" id="addStoryBtn">Add to queue</button>
+    </div>
+
+    <div class="grid" id="storyQueue"></div>
+    <div class="empty" id="storyEmpty">
+      <p class="word">🌙</p>
+      <p>Nothing queued yet. Paste a direct media link above to preview and save it.</p>
+    </div>
+  </div>
+
+  <footer></footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const REDDIT_AUTH = "https://www.reddit.com/api/v1/authorize";
+  const REDDIT_API = "https://oauth.reddit.com";
+  const SCOPES = "identity history save";
+  const LS_CLIENT_ID = "lunavault_client_id";
+  const LS_META = "lunavault_meta_v1";
+  const SS_TOKEN = "lunavault_token";
+  const SS_STATE = "lunavault_oauth_state";
+
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- redirect URI defaults ----------
+  const redirectUri = location.origin + location.pathname;
+  $("redirectUri").value = redirectUri;
+  $("clientId").value = localStorage.getItem(LS_CLIENT_ID) || "";
+
+  function showError(msg){
+    $("errorSlot").innerHTML = '<div class="error-box">' + msg + '</div>';
+  }
+
+  // ---------- OAuth kickoff ----------
+  $("connectBtn").addEventListener("click", function(){
+    const clientId = $("clientId").value.trim();
+    if(!clientId){ showError("Enter your Reddit app's Client ID first."); return; }
+    localStorage.setItem(LS_CLIENT_ID, clientId);
+    const state = Math.random().toString(36).slice(2) + Date.now();
+    sessionStorage.setItem(SS_STATE, state);
+    const url = REDDIT_AUTH + "?" + new URLSearchParams({
+      client_id: clientId,
+      response_type: "token",
+      state: state,
+      redirect_uri: redirectUri,
+      duration: "temporary",
+      scope: SCOPES
+    }).toString();
+    location.href = url;
+  });
+
+  $("disconnectBtn") && $("disconnectBtn").addEventListener("click", function(){
+    sessionStorage.removeItem(SS_TOKEN);
+    location.href = redirectUri;
+  });
+
+  // ---------- parse token from hash on return ----------
+  function tryConsumeHashToken(){
+    if(location.hash && location.hash.indexOf("access_token") !== -1){
+      const params = new URLSearchParams(location.hash.slice(1));
+      const token = params.get("access_token");
+      const state = params.get("state");
+      const expiresIn = parseInt(params.get("expires_in") || "3600", 10);
+      const expectedState = sessionStorage.getItem(SS_STATE);
+      history.replaceState(null, "", redirectUri);
+      if(!token) return false;
+      if(expectedState && state !== expectedState){
+        showError("Login could not be verified (state mismatch). Please try connecting again.");
+        return false;
+      }
+      sessionStorage.setItem(SS_TOKEN, JSON.stringify({
+        token: token,
+        expires: Date.now() + (expiresIn - 60) * 1000
+      }));
+      return true;
+    }
+    return false;
+  }
+
+  function getToken(){
+    const raw = sessionStorage.getItem(SS_TOKEN);
+    if(!raw) return null;
+    try{
+      const data = JSON.parse(raw);
+      if(Date.now() > data.expires){ sessionStorage.removeItem(SS_TOKEN); return null; }
+      return data.token;
+    }catch(e){ return null; }
+  }
+
+  async function redditGet(path, params){
+    const token = getToken();
+    if(!token) throw new Error("no-token");
+    const url = REDDIT_API + path + (params ? "?" + new URLSearchParams(params).toString() : "");
+    const res = await fetch(url, { headers:{ "Authorization":"Bearer " + token } });
+    if(res.status === 401 || res.status === 403){ throw new Error("auth-failed"); }
+    if(!res.ok){ throw new Error("http-" + res.status); }
+    return res.json();
+  }
+
+  async function redditPost(path, form){
+    const token = getToken();
+    const res = await fetch(REDDIT_API + path, {
+      method:"POST",
+      headers:{
+        "Authorization":"Bearer " + token,
+        "Content-Type":"application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams(form).toString()
+    });
+    return res.ok;
+  }
+
+  // ---------- local metadata (tags / favorites) ----------
+  function loadMeta(){
+    try{ return JSON.parse(localStorage.getItem(LS_META)) || {}; }catch(e){ return {}; }
+  }
+  function saveMeta(meta){ localStorage.setItem(LS_META, JSON.stringify(meta)); }
+  let meta = loadMeta();
+
+  // ---------- state ----------
+  let username = "";
+  let items = [];       // normalized saved items
+  let after = null;
+  let doneFetching = false;
+
+  function normalize(child){
+    const k = child.kind; // t3 = post, t1 = comment
+    const d = child.data;
+    const isPost = k === "t3";
+    return {
+      id: d.name, // fullname, e.g. t3_xxx
+      type: isPost ? "post" : "comment",
+      subreddit: d.subreddit,
+      title: isPost ? d.title : ("Comment on: " + (d.link_title || "a post")),
+      snippet: isPost ? (d.selftext ? d.selftext.slice(0,180) : "") : (d.body || "").slice(0,220),
+      permalink: "https://www.reddit.com" + d.permalink,
+      score: d.score || 0,
+      created: d.created_utc || 0,
+      author: d.author || "[deleted]"
+    };
+  }
+
+  async function fetchPage(){
+    const data = await redditGet("/user/" + username + "/saved", {
+      limit: 100,
+      after: after || undefined
+    });
+    const children = (data.data && data.data.children) || [];
+    items = items.concat(children.map(normalize));
+    after = data.data.after;
+    if(!after) doneFetching = true;
+  }
+
+  function uniqueSubreddits(){
+    const set = new Set(items.map(i => i.subreddit));
+    return Array.from(set).sort((a,b)=>a.localeCompare(b));
+  }
+
+  function populateSubredditFilter(){
+    const sel = $("subredditFilter");
+    const current = sel.value;
+    sel.innerHTML = '<option value="">All subreddits</option>' +
+      uniqueSubreddits().map(s => '<option value="'+s+'">r/'+s+'</option>').join("");
+    sel.value = current;
+  }
+
+  function matchesFilters(item){
+    const q = $("search").value.trim().toLowerCase();
+    const sr = $("subredditFilter").value;
+    const type = $("typeFilter").value;
+    const favOnly = $("favToggle").classList.contains("active");
+    const m = meta[item.id] || {};
+    if(sr && item.subreddit !== sr) return false;
+    if(type && item.type !== type) return false;
+    if(favOnly && !m.favorite) return false;
+    if(q){
+      const tagStr = (m.tags || []).join(" ").toLowerCase();
+      const hay = (item.title + " " + item.subreddit + " " + tagStr).toLowerCase();
+      if(hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  }
+
+  function sortItems(list){
+    const mode = $("sortBy").value;
+    const copy = list.slice();
+    if(mode === "saved_asc") copy.reverse();
+    else if(mode === "score_desc") copy.sort((a,b)=>b.score - a.score);
+    else if(mode === "subreddit") copy.sort((a,b)=>a.subreddit.localeCompare(b.subreddit));
+    return copy;
+  }
+
+  function render(){
+    populateSubredditFilter();
+    const filtered = sortItems(items.filter(matchesFilters));
+    const grid = $("grid");
+    grid.innerHTML = "";
+    $("emptyState").style.display = filtered.length ? "none" : "block";
+
+    filtered.forEach(item => {
+      const m = meta[item.id] || { tags: [], favorite: false };
+      const el = document.createElement("div");
+      el.className = "post";
+      const date = item.created ? new Date(item.created * 1000).toLocaleDateString() : "";
+      el.innerHTML =
+        '<div class="post-meta"><span><span class="sr">r/'+esc(item.subreddit)+'</span> · '+item.type+'</span><span>'+date+'</span></div>' +
+        '<p class="post-title"><a href="'+item.permalink+'" target="_blank" rel="noopener">'+esc(item.title)+'</a></p>' +
+        (item.snippet ? '<p class="post-snip">'+esc(item.snippet)+(item.snippet.length>=180?'…':'')+'</p>' : '') +
+        '<div class="post-tags">' + (m.tags||[]).map(t=>'<span class="tagchip">'+esc(t)+'</span>').join("") + '</div>' +
+        '<div class="post-actions">' +
+          '<button class="icon-btn fav '+(m.favorite?'on':'')+'" data-act="fav">'+(m.favorite?'★ Favorited':'☆ Favorite')+'</button>' +
+          '<input class="tag-input" placeholder="add tag…" data-act="tag">' +
+          '<button class="icon-btn" data-act="unsave">Unsave</button>' +
+        '</div>';
+
+      el.querySelector('[data-act="fav"]').addEventListener("click", () => {
+        meta[item.id] = meta[item.id] || {tags:[], favorite:false};
+        meta[item.id].favorite = !meta[item.id].favorite;
+        saveMeta(meta); render();
+      });
+      el.querySelector('[data-act="tag"]').addEventListener("keydown", (e) => {
+        if(e.key === "Enter" && e.target.value.trim()){
+          meta[item.id] = meta[item.id] || {tags:[], favorite:false};
+          meta[item.id].tags.push(e.target.value.trim());
+          saveMeta(meta); render();
+        }
+      });
+      el.querySelector('[data-act="unsave"]').addEventListener("click", async () => {
+        const ok = demoMode ? true : await redditPost("/api/unsave", { id: item.id });
+        if(ok){
+          items = items.filter(i => i.id !== item.id);
+          delete meta[item.id]; saveMeta(meta);
+          render();
+        }
+      });
+
+      grid.appendChild(el);
+    });
+
+    $("countLabel").textContent = filtered.length + " of " + items.length + " saved item" + (items.length===1?"":"s") + " shown";
+    $("loadMoreLink").style.display = doneFetching ? "none" : "inline";
+  }
+
+  function esc(s){
+    return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  ["search","subredditFilter","typeFilter","sortBy"].forEach(id => {
+    $(id).addEventListener("input", render);
+    $(id).addEventListener("change", render);
+  });
+  $("favToggle").addEventListener("click", () => {
+    $("favToggle").classList.toggle("active");
+    render();
+  });
+  $("loadMoreLink").addEventListener("click", async () => {
+    $("countLabel").textContent = "Loading more…";
+    await fetchPage();
+    render();
+  });
+  $("exportBtn").addEventListener("click", () => {
+    const out = items.map(i => Object.assign({}, i, { meta: meta[i.id] || {} }));
+    const blob = new Blob([JSON.stringify(out, null, 2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "lunavault-export.json";
+    a.click();
+  });
+
+  // ---------- tabs ----------
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const tab = btn.dataset.tab;
+      $("panel-reddit").style.display = tab === "reddit" ? "block" : "none";
+      $("panel-story").style.display = tab === "story" ? "block" : "none";
+    });
+  });
+
+  // ---------- skip / demo mode ----------
+  let demoMode = false;
+  const DEMO_ITEMS = [
+    { id:"demo_1", type:"post", subreddit:"spaceporn", title:"The Vela supernova remnant, 6 hours exposure", snippet:"Shot from my backyard over three nights — still can't believe how much detail came through.", permalink:"https://reddit.com", score:4210, created: Date.now()/1000 - 3600*5, author:"demo" },
+    { id:"demo_2", type:"comment", subreddit:"AskEngineers", title:"Comment on: Why do PID loops oscillate at high gain?", snippet:"Because you're feeding derivative noise back into the actuator faster than the plant can respond…", permalink:"https://reddit.com", score:312, created: Date.now()/1000 - 3600*30, author:"demo" },
+    { id:"demo_3", type:"post", subreddit:"embedded", title:"Finally got I2C stable on my ESP8266 OLED build", snippet:"Turned out to be a pull-up resistor issue the whole time. Classic.", permalink:"https://reddit.com", score:98, created: Date.now()/1000 - 3600*80, author:"demo" },
+    { id:"demo_4", type:"post", subreddit:"dataisbeautiful", title:"[OC] Ten years of my own sleep data, visualized", snippet:"", permalink:"https://reddit.com", score:1560, created: Date.now()/1000 - 3600*140, author:"demo" }
+  ];
+  $("skipBtn").addEventListener("click", () => {
+    demoMode = true;
+    items = DEMO_ITEMS.slice();
+    username = "";
+    $("whoLine").innerHTML = 'Browsing <b>demo data</b> — <a id="exitDemo" style="color:var(--glow); cursor:pointer; text-decoration:none; border-bottom:1px solid var(--glow-dim);">connect Reddit</a> anytime';
+    $("connect").style.display = "none";
+    $("app").style.display = "block";
+    render();
+    document.getElementById("exitDemo").addEventListener("click", () => {
+      demoMode = false; items = [];
+      $("app").style.display = "none";
+      $("connect").style.display = "block";
+    });
+  });
+
+  // ---------- story saver ----------
+  const LS_STORY = "lunavault_story_queue";
+  function loadStoryQueue(){ try{ return JSON.parse(localStorage.getItem(LS_STORY)) || []; }catch(e){ return []; } }
+  function saveStoryQueue(q){ localStorage.setItem(LS_STORY, JSON.stringify(q)); }
+  let storyQueue = loadStoryQueue();
+
+  function isVideoUrl(url){ return /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url); }
+
+  function renderStoryQueue(){
+    const grid = $("storyQueue");
+    grid.innerHTML = "";
+    $("storyEmpty").style.display = storyQueue.length ? "none" : "block";
+    storyQueue.forEach(item => {
+      const el = document.createElement("div");
+      el.className = "post";
+      const mediaTag = isVideoUrl(item.url)
+        ? '<video class="story-media" src="'+item.url+'" controls></video>'
+        : '<img class="story-media" src="'+item.url+'" alt="" onerror="this.style.display=\'none\'">';
+      el.innerHTML =
+        mediaTag +
+        '<p class="post-snip" style="word-break:break-all;">'+esc(item.url)+'</p>' +
+        '<div class="post-actions">' +
+          '<button class="icon-btn" data-act="dl">Download</button>' +
+          '<button class="icon-btn" data-act="open">Open original</button>' +
+          '<button class="icon-btn" data-act="rm">Remove</button>' +
+        '</div>';
+      el.querySelector('[data-act="dl"]').addEventListener("click", async () => {
+        try{
+          const res = await fetch(item.url, { mode:"cors" });
+          if(!res.ok) throw new Error("bad response");
+          const blob = await res.blob();
+          const ext = isVideoUrl(item.url) ? "mp4" : "jpg";
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "lunavault-story-" + item.id + "." + ext;
+          a.click();
+        }catch(e){
+          // cross-origin server won't allow a fetched download — fall back to opening it
+          window.open(item.url, "_blank", "noopener");
+        }
+      });
+      el.querySelector('[data-act="open"]').addEventListener("click", () => window.open(item.url, "_blank", "noopener"));
+      el.querySelector('[data-act="rm"]').addEventListener("click", () => {
+        storyQueue = storyQueue.filter(i => i.id !== item.id);
+        saveStoryQueue(storyQueue); renderStoryQueue();
+      });
+      grid.appendChild(el);
+    });
+  }
+
+  $("addStoryBtn").addEventListener("click", () => {
+    const url = $("storyUrl").value.trim();
+    if(!url) return;
+    storyQueue.unshift({ id: Date.now().toString(36), url: url });
+    saveStoryQueue(storyQueue);
+    $("storyUrl").value = "";
+    renderStoryQueue();
+  });
+  renderStoryQueue();
+
+  // ---------- intro splash ----------
+  (function initSplash(){
+    const splash = document.getElementById("splash");
+    const vid = document.getElementById("introVid");
+    const skip = document.getElementById("skipIntro");
+    if(!splash) return;
+    const dismiss = () => {
+      splash.classList.add("hide");
+      setTimeout(() => { splash.style.display = "none"; }, 750);
+    };
+    // never replay the intro for a returning visitor in the same session
+    if(sessionStorage.getItem("lunavault_intro_seen")){
+      splash.style.display = "none";
+      return;
+    }
+    sessionStorage.setItem("lunavault_intro_seen", "1");
+    vid && vid.addEventListener("ended", dismiss);
+    skip && skip.addEventListener("click", dismiss);
+    vid && vid.addEventListener("error", dismiss);
+    // safety timeout in case the video fails to load
+    setTimeout(dismiss, 8000);
+  })();
+
+  async function boot(){
+    tryConsumeHashToken();
+    const token = getToken();
+    if(!token){
+      $("connect").style.display = "block";
+      $("app").style.display = "none";
+      return;
+    }
+    $("connect").style.display = "none";
+    $("app").style.display = "block";
+    try{
+      const me = await redditGet("/api/v1/me");
+      username = me.name;
+      $("whoUser").textContent = "u/" + username;
+      await fetchPage();
+      render();
+    }catch(e){
+      sessionStorage.removeItem(SS_TOKEN);
+      $("connect").style.display = "block";
+      $("app").style.display = "none";
+      showError("Your session expired or the connection failed. Please connect again.");
+    }
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
