@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lunavault — saved post organizer</title>
+<title>Lunavault — The Vault</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌙</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -52,738 +52,585 @@
   ::-webkit-scrollbar-thumb:hover{ background:var(--glow-dim); }
   :focus-visible{ outline:2px solid var(--glow); outline-offset:2px; border-radius:4px; }
 
-  /* ambient dust field */
-  body::before{
-    content:"";
-    position:fixed; inset:0;
-    background-image:
-      radial-gradient(1.5px 1.5px at 20% 30%, rgba(199,203,224,.45), transparent),
-      radial-gradient(1px 1px at 60% 70%, rgba(199,203,224,.35), transparent),
-      radial-gradient(1.5px 1.5px at 80% 20%, rgba(199,203,224,.3), transparent),
-      radial-gradient(1px 1px at 35% 85%, rgba(199,203,224,.25), transparent),
-      radial-gradient(1px 1px at 90% 60%, rgba(199,203,224,.25), transparent),
-      radial-gradient(1.5px 1.5px at 10% 65%, rgba(199,203,224,.25), transparent),
-      radial-gradient(1px 1px at 50% 10%, rgba(199,203,224,.3), transparent);
-    background-repeat:repeat;
-    background-size:600px 600px;
-    pointer-events:none;
-    z-index:0;
-    opacity:.5;
-  }
-  /* edge vignette for depth */
+  #starfield{ position:fixed; inset:0; z-index:0; pointer-events:none; }
   body::after{
-    content:"";
-    position:fixed; inset:0; pointer-events:none; z-index:0;
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
     box-shadow:inset 0 0 180px rgba(0,0,0,.55);
   }
   .glow{
-    position:fixed; top:-280px; right:-200px;
+    position:fixed; top:-260px; right:-220px;
     width:640px; height:640px; border-radius:50%;
     background:radial-gradient(circle, rgba(154,163,240,.22), rgba(154,163,240,.04) 45%, transparent 70%);
     filter:blur(10px);
     pointer-events:none; z-index:0;
     animation:drift 26s ease-in-out infinite;
   }
-  @keyframes drift{
-    0%,100%{ transform:translate(0,0); }
-    50%{ transform:translate(-30px, 40px); }
-  }
+  @keyframes drift{ 0%,100%{ transform:translate(0,0); } 50%{ transform:translate(-30px,40px); } }
   @media (prefers-reduced-motion: reduce){ .glow{ animation:none; } html{ scroll-behavior:auto; } }
 
-  .wrap{ position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:0 24px 80px; }
+  /* ---- persistent cursor-reactive moon, docked top-right ---- */
+  #dockMoon{
+    position:fixed; top:18px; right:22px; z-index:6;
+    width:84px; height:84px; opacity:0; transition:opacity 1s ease .3s;
+    filter:drop-shadow(0 0 22px rgba(167,176,245,.35));
+  }
+  #dockMoon.show{ opacity:1; }
+  #dockMoon canvas{ width:100%; height:100%; display:block; }
 
+  .wrap{ position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:0 24px 80px; }
   header{ padding:48px 0 30px; }
   .word{
-    font-family:'Fraunces', serif;
-    font-weight:500;
-    font-style:italic;
-    font-size:clamp(32px, 5vw, 46px);
-    letter-spacing:.2px;
-    color:var(--lunar);
-    margin:0 0 8px;
-    text-shadow:0 0 40px rgba(167,176,245,.15);
+    font-family:'Fraunces', serif; font-weight:500; font-style:italic;
+    font-size:clamp(32px, 5vw, 46px); letter-spacing:.2px; color:var(--lunar);
+    margin:0 0 8px; text-shadow:0 0 40px rgba(167,176,245,.15);
   }
   .word span{ color:var(--gold); font-style:normal; }
-  .tagline{ color:var(--dust-dim); font-size:14.5px; margin:0 0 28px; max-width:46ch; line-height:1.55; }
+  .tagline{ color:var(--dust-dim); font-size:14.5px; margin:0 0 28px; max-width:50ch; line-height:1.55; }
 
-  /* connect card */
-  .card{
-    background:linear-gradient(160deg, var(--panel), var(--void-2));
-    border:1px solid var(--line-2);
-    border-radius:16px;
-    padding:30px;
-    box-shadow:var(--shadow-lg);
-  }
-  .card h2{
-    font-family:'Fraunces', serif; font-weight:500; font-size:21px; margin:0 0 8px; color:var(--lunar);
-  }
-  .card p.hint{ color:var(--dust-dim); font-size:13.5px; line-height:1.65; margin:0 0 22px; }
-  .field{ margin-bottom:18px; }
+  .card{ background:linear-gradient(160deg, var(--panel), var(--void-2)); border:1px solid var(--line-2); border-radius:16px; padding:28px; box-shadow:var(--shadow-lg); margin-bottom:24px; }
+  .card h2{ font-family:'Fraunces', serif; font-weight:500; font-size:20px; margin:0 0 8px; color:var(--lunar); }
+  .card p.hint{ color:var(--dust-dim); font-size:13.5px; line-height:1.6; margin:0 0 20px; }
+
+  .field{ margin-bottom:14px; }
   .field label{ display:block; font-size:12.5px; color:var(--dust-dim); margin-bottom:7px; font-weight:500; }
-  .field input{
+  .field input, .field select{
     width:100%; background:var(--void); border:1px solid var(--line-2); color:var(--lunar);
-    border-radius:9px; padding:11px 13px; font-size:14px; font-family:'Inter',sans-serif;
-    outline:none; transition:border-color .15s, box-shadow .15s;
+    border-radius:9px; padding:11px 13px; font-size:14px; font-family:'Inter',sans-serif; outline:none;
+    transition:border-color .15s, box-shadow .15s;
   }
-  .field input:focus{ border-color:var(--glow); box-shadow:0 0 0 3px rgba(167,176,245,.14); }
-  .field .sub{ color:var(--dust-dim); font-size:11.5px; margin-top:6px; line-height:1.5; }
-  .field .sub a{ color:var(--glow); text-decoration:none; border-bottom:1px solid var(--glow-dim); }
+  .field input:focus, .field select:focus{ border-color:var(--glow); box-shadow:0 0 0 3px rgba(167,176,245,.14); }
 
-  button{
-    font-family:'Inter',sans-serif; cursor:pointer; border:none; border-radius:9px;
-    font-size:14px; font-weight:600; padding:11px 20px; transition:filter .15s, transform .08s, border-color .15s, background .15s, color .15s;
-  }
+  .type-toggle{ display:flex; gap:8px; margin-bottom:18px; }
+  .type-btn{ flex:1; background:var(--void); border:1px solid var(--line-2); color:var(--dust-dim); border-radius:9px; padding:10px; font-size:13px; }
+  .type-btn.active{ border-color:var(--glow); color:var(--glow); background:rgba(167,176,245,.08); }
+
+  .detect-line{ font-size:12.5px; color:var(--dust-dim); margin:-6px 0 16px; min-height:18px; }
+  .detect-line b{ color:var(--lunar); }
+
+  button{ font-family:'Inter',sans-serif; cursor:pointer; border:none; border-radius:9px; font-size:14px; font-weight:600; padding:11px 20px; transition:filter .15s, transform .08s, border-color .15s, background .15s, color .15s; }
   button:active{ transform:scale(.97); }
   .btn-primary{ background:linear-gradient(160deg, #b4bcf8, var(--glow)); color:#0a0d1f; box-shadow:0 6px 18px rgba(122,132,214,.28); }
   .btn-primary:hover{ filter:brightness(1.08); }
-  .btn-primary:disabled{ opacity:.45; cursor:default; box-shadow:none; }
   .btn-ghost{ background:var(--panel-2); border:1px solid var(--line-2); color:var(--lunar); }
   .btn-ghost:hover{ border-color:var(--glow); color:var(--glow); background:var(--panel-3); }
   .btn-danger{ background:transparent; border:1px solid rgba(224,138,138,.35); color:var(--danger); }
   .btn-danger:hover{ background:rgba(224,138,138,.1); }
   .btn-small{ padding:7px 13px; font-size:12.5px; }
 
-  .error-box{
-    background:rgba(224,138,138,.08); border:1px solid rgba(224,138,138,.3);
-    color:var(--danger); border-radius:9px; padding:13px 15px; font-size:13px; margin-bottom:18px;
-  }
-
-  /* tabs */
-  .tabs{ display:flex; gap:8px; margin-bottom:28px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:5px; width:fit-content; }
-  .tab-btn{
-    background:transparent; border:1px solid transparent; color:var(--dust-dim);
-    border-radius:10px; padding:9px 18px; font-size:13.5px; font-weight:600;
-  }
-  .tab-btn.active{ background:var(--panel-3); color:var(--lunar); box-shadow:inset 0 0 0 1px var(--line-3); }
-  .tab-btn:not(.active):hover{ color:var(--lunar); }
-
-  /* story saver cards */
-  .story-media{
-    width:100%; max-height:220px; object-fit:contain; border-radius:9px;
-    background:var(--void); display:block;
-  }
-
-  /* app shell */
-  #app{ display:none; }
-  .topbar{
-    display:flex; align-items:center; justify-content:space-between; gap:16px;
-    flex-wrap:wrap; margin-bottom:22px;
-  }
-  .who{ font-size:13px; color:var(--dust-dim); }
-  .who b{ color:var(--lunar); font-weight:600; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+  .topbar h2{ font-family:'Fraunces', serif; font-weight:500; font-size:22px; margin:0; }
 
   .controls{
     display:flex; gap:10px; flex-wrap:wrap; align-items:center;
     padding:14px 16px; background:var(--panel); border:1px solid var(--line-2); border-radius:13px;
-    margin-bottom:22px;
-    position:sticky; top:14px; z-index:5;
-    box-shadow:var(--shadow-sm);
-    backdrop-filter:blur(10px);
+    margin-bottom:22px; position:sticky; top:14px; z-index:5; box-shadow:var(--shadow-sm); backdrop-filter:blur(10px);
   }
-  .controls input[type=text]{
-    flex:1 1 200px; background:var(--void); border:1px solid var(--line-2); color:var(--lunar);
-    border-radius:8px; padding:9px 12px; font-size:13.5px; outline:none; transition:border-color .15s, box-shadow .15s;
-  }
+  .controls input[type=text]{ flex:1 1 200px; background:var(--void); border:1px solid var(--line-2); color:var(--lunar); border-radius:8px; padding:9px 12px; font-size:13.5px; outline:none; }
   .controls input[type=text]:focus{ border-color:var(--glow); box-shadow:0 0 0 3px rgba(167,176,245,.14); }
-  .controls select{
-    background:var(--void); border:1px solid var(--line-2); color:var(--lunar);
-    border-radius:8px; padding:9px 10px; font-size:13px; outline:none; cursor:pointer;
-  }
-  .controls select:hover{ border-color:var(--line-3); }
-  .chip-toggle{
-    display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:20px;
-    border:1px solid var(--line-2); font-size:13px; color:var(--dust-dim); cursor:pointer; user-select:none;
-    transition:border-color .15s, color .15s, background .15s;
-  }
+  .controls select{ background:var(--void); border:1px solid var(--line-2); color:var(--lunar); border-radius:8px; padding:9px 10px; font-size:13px; outline:none; cursor:pointer; }
+  .chip-toggle{ display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:20px; border:1px solid var(--line-2); font-size:13px; color:var(--dust-dim); cursor:pointer; user-select:none; transition:border-color .15s, color .15s, background .15s; }
   .chip-toggle:hover{ border-color:var(--line-3); }
   .chip-toggle.active{ border-color:var(--gold-dim); color:var(--gold); background:rgba(234,201,136,.08); }
 
-  .count-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:12.5px; color:var(--dust-dim); }
-  .count-row a{ color:var(--glow); cursor:pointer; text-decoration:none; border-bottom:1px solid var(--glow-dim); }
-  .count-row a:hover{ color:var(--lunar); }
+  .folder{ background:var(--panel); border:1px solid var(--line-2); border-radius:14px; margin-bottom:16px; overflow:hidden; }
+  .folder summary{
+    list-style:none; cursor:pointer; padding:16px 20px; display:flex; align-items:center; gap:10px;
+    font-weight:600; font-size:14.5px; color:var(--lunar);
+  }
+  .folder summary::-webkit-details-marker{ display:none; }
+  .folder summary .chev{ margin-left:auto; color:var(--dust-dim); transition:transform .2s; }
+  .folder[open] summary .chev{ transform:rotate(90deg); }
+  .folder summary .count{ color:var(--dust-dim); font-weight:400; font-size:12.5px; }
+  .folder .grid{ padding:4px 18px 18px; }
 
-  .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(310px,1fr)); gap:14px; }
-
-  .post{
-    background:linear-gradient(165deg, var(--panel), var(--panel) 60%, var(--void-2));
-    border:1px solid var(--line); border-radius:13px;
-    padding:17px 19px; display:flex; flex-direction:column; gap:10px;
-    transition:border-color .18s, transform .18s, box-shadow .18s;
-  }
-  .post:hover{ border-color:var(--line-3); transform:translateY(-2px); box-shadow:var(--shadow-sm); }
-  .post-meta{ display:flex; justify-content:space-between; align-items:baseline; font-size:12px; color:var(--dust-dim); }
-  .post-meta .sr{ color:var(--glow-soft); font-weight:600; }
-  .post-title{ font-size:15px; line-height:1.45; color:var(--lunar); margin:0; font-weight:500; }
-  .post-title a{ color:inherit; text-decoration:none; }
-  .post-title a:hover{ color:var(--glow); }
-  .post-snip{ font-size:13px; color:var(--dust-dim); line-height:1.55; margin:0; }
-  .post-tags{ display:flex; gap:6px; flex-wrap:wrap; }
-  .tagchip{
-    font-size:11px; padding:3px 9px; border-radius:12px; background:var(--panel-3);
-    color:var(--dust-dim); border:1px solid var(--line-2);
-  }
-  .post-actions{ display:flex; gap:8px; align-items:center; margin-top:4px; flex-wrap:wrap; padding-top:10px; border-top:1px solid var(--line); }
-  .icon-btn{
-    background:transparent; border:1px solid var(--line-2); color:var(--dust-dim);
-    border-radius:8px; padding:7px 11px; font-size:12px; transition:border-color .15s, color .15s, background .15s;
-  }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(290px,1fr)); gap:14px; }
+  .item{ background:linear-gradient(165deg, var(--panel-2), var(--void-2)); border:1px solid var(--line); border-radius:13px; padding:16px 18px; display:flex; flex-direction:column; gap:9px; transition:border-color .18s, transform .18s, box-shadow .18s; }
+  .item:hover{ border-color:var(--line-3); transform:translateY(-2px); box-shadow:var(--shadow-sm); }
+  .item-meta{ display:flex; justify-content:space-between; align-items:center; font-size:11.5px; color:var(--dust-dim); }
+  .badge{ padding:2px 9px; border-radius:10px; font-size:10.5px; font-weight:600; letter-spacing:.3px; text-transform:uppercase; }
+  .badge.post{ background:rgba(167,176,245,.12); color:var(--glow); }
+  .badge.story{ background:rgba(234,201,136,.12); color:var(--gold); }
+  .item-url{ font-size:13px; color:var(--lunar); word-break:break-all; line-height:1.5; }
+  .item-url a{ color:inherit; text-decoration:none; }
+  .item-url a:hover{ color:var(--glow); }
+  .item-tags{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tagchip{ font-size:11px; padding:3px 9px; border-radius:12px; background:var(--panel-3); color:var(--dust-dim); border:1px solid var(--line-2); }
+  .item-actions{ display:flex; gap:8px; align-items:center; margin-top:4px; flex-wrap:wrap; padding-top:10px; border-top:1px solid var(--line); }
+  .icon-btn{ background:transparent; border:1px solid var(--line-2); color:var(--dust-dim); border-radius:8px; padding:7px 11px; font-size:12px; transition:border-color .15s, color .15s, background .15s; }
   .icon-btn:hover{ border-color:var(--glow); color:var(--glow); background:rgba(167,176,245,.06); }
-  .icon-btn.fav{ border-color:transparent; padding:7px 9px; }
-  .icon-btn.fav.on{ color:var(--gold); }
+  .icon-btn.fav.on{ color:var(--gold); border-color:transparent; }
   .icon-btn.fav:hover{ color:var(--gold); background:rgba(234,201,136,.08); }
-  .tag-input{
-    background:var(--void); border:1px solid var(--line-2); color:var(--lunar);
-    border-radius:7px; padding:6px 9px; font-size:11.5px; width:96px; outline:none; transition:border-color .15s;
-  }
+  .tag-input{ background:var(--void); border:1px solid var(--line-2); color:var(--lunar); border-radius:7px; padding:6px 9px; font-size:11.5px; width:96px; outline:none; }
   .tag-input:focus{ border-color:var(--glow); }
 
-  .empty{
-    text-align:center; padding:70px 20px; color:var(--dust-dim);
-    background:var(--panel); border:1px dashed var(--line-2); border-radius:14px;
-  }
+  .empty{ text-align:center; padding:70px 20px; color:var(--dust-dim); background:var(--panel); border:1px dashed var(--line-2); border-radius:14px; }
   .empty .word{ font-size:30px; margin-bottom:12px; opacity:.7; }
-
+  .count-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:12.5px; color:var(--dust-dim); }
+  .count-row a{ color:var(--danger); cursor:pointer; text-decoration:none; border-bottom:1px solid rgba(224,138,138,.4); }
   footer{ text-align:center; margin-top:44px; color:var(--dust-faint); font-size:12px; }
 
   @media (max-width:520px){
-    .wrap{ padding:0 16px 60px; }
-    header{ padding:34px 0 22px; }
-    .controls{ position:static; }
+    .wrap{ padding:0 16px 60px; } header{ padding:34px 0 22px; } .controls{ position:static; }
+    #dockMoon{ width:60px; height:60px; top:14px; right:14px; }
   }
 
-  /* intro splash */
-  #splash{
-    position:fixed; inset:0; z-index:50; background:var(--void);
-    display:flex; align-items:center; justify-content:center;
-    transition:opacity .7s ease;
-  }
-  #splash video{ width:100%; height:100%; object-fit:cover; }
+  /* ---- intro ---- */
+  #splash{ position:fixed; inset:0; z-index:50; background:var(--void); display:flex; align-items:center; justify-content:center; transition:opacity .9s ease; overflow:hidden; }
   #splash.hide{ opacity:0; pointer-events:none; }
-  #skipIntro{
-    position:absolute; bottom:26px; right:26px;
-    background:rgba(15,18,38,.7); border:1px solid var(--line-2); color:var(--dust-dim);
-    border-radius:20px; padding:8px 16px; font-size:12.5px; backdrop-filter:blur(6px);
-  }
+  #splashStars{ position:absolute; inset:0; }
+  #introMoonWrap{ position:relative; width:260px; height:260px; opacity:0; transform:scale(.7); transition:opacity 1.1s ease, transform 1.4s cubic-bezier(.2,.8,.2,1); }
+  #introMoonWrap.in{ opacity:1; transform:scale(1); }
+  #introMoonWrap canvas{ width:100%; height:100%; }
+  #introMoonWrap.dock{ opacity:0; transform:scale(.28) translateY(-50px); transition:opacity .6s ease, transform .8s cubic-bezier(.4,0,.2,1); }
+  .intro-text{ position:absolute; top:66%; left:50%; transform:translate(-50%,0); text-align:center; width:100%; }
+  .intro-word{ font-family:'Fraunces', serif; font-style:italic; font-weight:500; font-size:clamp(38px,7vw,58px); opacity:0; transform:translateY(16px); transition:opacity .9s ease, transform .9s ease; }
+  .intro-word.in{ opacity:1; transform:translateY(0); }
+  .intro-word .l1{ color:var(--lunar); }
+  .intro-word .l2{ color:var(--gold); }
+  .intro-line{ width:0; height:1px; background:var(--gold); margin:16px auto; transition:width 1s ease; opacity:.7; }
+  .intro-line.in{ width:120px; }
+  .intro-tag{ color:var(--dust-dim); font-size:14px; opacity:0; transition:opacity .9s ease; }
+  .intro-tag.in{ opacity:1; }
+  #skipIntro{ position:absolute; bottom:28px; right:28px; background:rgba(15,18,38,.7); border:1px solid var(--line-2); color:var(--dust-dim); border-radius:20px; padding:8px 16px; font-size:12.5px; backdrop-filter:blur(6px); z-index:2; }
   #skipIntro:hover{ color:var(--lunar); border-color:var(--glow); }
-  @media (prefers-reduced-motion: reduce){
-    #splash{ display:none; }
-  }
+  #introHint{ position:absolute; bottom:28px; left:28px; font-size:11.5px; color:var(--dust-faint); opacity:0; transition:opacity 1s ease; }
+  #introHint.in{ opacity:1; }
+  @media (prefers-reduced-motion: reduce){ #splash{ display:none; } }
 </style>
 </head>
 <body>
+
+<canvas id="starfield"></canvas>
+<div class="glow"></div>
+<div id="dockMoon"><canvas id="dockCanvas" width="168" height="168"></canvas></div>
+
 <div id="splash">
-  <video id="introVid" autoplay muted playsinline>
-    <source src="lunavault_intro.mp4" type="video/mp4">
-  </video>
+  <canvas id="splashStars"></canvas>
+  <div id="introMoonWrap"><canvas id="introCanvas" width="520" height="520"></canvas></div>
+  <div class="intro-text">
+    <p class="intro-word" id="introWord"><span class="l1">Luna</span><span class="l2">vault</span></p>
+    <div class="intro-line" id="introLine"></div>
+    <p class="intro-tag" id="introTag">Everything you save, sorted where it belongs.</p>
+  </div>
+  <div id="introHint">Move your cursor — the moon follows it</div>
   <button id="skipIntro">Skip intro</button>
 </div>
-<div class="glow"></div>
-<div class="wrap">
 
+<div class="wrap">
   <header>
     <p class="word">Luna<span>vault</span></p>
-    <p class="tagline">Your saves, sorted out of the pile. Search, tag, and keep what matters — everything stays in your browser.</p>
+    <p class="tagline">Paste a link from anywhere — Instagram, Reddit, TikTok, X, Pinterest, YouTube — and Lunavault drops it straight into the right collection.</p>
   </header>
 
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="reddit">Saved posts</button>
-    <button class="tab-btn" data-tab="story">Story saver</button>
+  <div class="card">
+    <h2>Add to the Vault</h2>
+    <p class="hint">Paste the address of a post or story you copied from any platform. Lunavault reads the link, figures out where it's from, and files it automatically — no folders to make yourself.</p>
+    <div class="field">
+      <label>Link</label>
+      <input type="text" id="vaultUrl" placeholder="https://www.instagram.com/p/... or any post/story link">
+    </div>
+    <div class="type-toggle">
+      <button type="button" class="type-btn active" data-type="post">Post</button>
+      <button type="button" class="type-btn" data-type="story">Story</button>
+    </div>
+    <p class="detect-line" id="detectLine">Paste a link above — Lunavault will guess the platform for you.</p>
+    <button class="btn-primary" id="addBtn">Save to Vault</button>
   </div>
 
-  <!-- ===================== REDDIT PANEL ===================== -->
-  <div id="panel-reddit">
-
-  <!-- CONNECT SCREEN -->
-  <div id="connect">
-    <div id="errorSlot"></div>
-    <div class="card">
-      <h2>Connect your Reddit account</h2>
-      <p class="hint">Lunavault talks to Reddit directly from your browser — nothing passes through a server. You'll need a free Reddit app to do it:</p>
-      <div class="field">
-        <label>1. Client ID</label>
-        <input id="clientId" type="text" placeholder="e.g. aBcD3fGhIjKlMn">
-        <div class="sub">Create one at <a href="https://www.reddit.com/prefs/apps" target="_blank" rel="noopener">reddit.com/prefs/apps</a> — choose type <b>installed app</b>, and set the redirect URI below.</div>
-      </div>
-      <div class="field">
-        <label>2. Redirect URI (paste this exact value into the Reddit app form)</label>
-        <input id="redirectUri" type="text" readonly>
-      </div>
-      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-        <button class="btn-primary" id="connectBtn">Connect with Reddit</button>
-        <button class="btn-ghost" id="skipBtn">Skip for now</button>
-      </div>
+  <div class="topbar">
+    <h2>The Vault</h2>
+    <div style="display:flex; gap:10px;">
+      <button class="btn-ghost btn-small" id="exportBtn">Export JSON</button>
     </div>
   </div>
 
-  <!-- APP SCREEN -->
-  <div id="app">
-    <div class="topbar">
-      <span class="who" id="whoLine">Signed in as <b id="whoUser">—</b></span>
-      <div style="display:flex; gap:10px;">
-        <button class="btn-ghost btn-small" id="exportBtn">Export JSON</button>
-        <button class="btn-ghost btn-small" id="disconnectBtn">Disconnect</button>
-      </div>
-    </div>
-
-    <div class="controls">
-      <input type="text" id="search" placeholder="Search title, subreddit, or tag…">
-      <select id="subredditFilter"><option value="">All subreddits</option></select>
-      <select id="typeFilter">
-        <option value="">Posts &amp; comments</option>
-        <option value="post">Posts only</option>
-        <option value="comment">Comments only</option>
-      </select>
-      <select id="sortBy">
-        <option value="saved_desc">Newest saved</option>
-        <option value="saved_asc">Oldest saved</option>
-        <option value="score_desc">Top score</option>
-        <option value="subreddit">Subreddit A–Z</option>
-      </select>
-      <div class="chip-toggle" id="favToggle">★ Favorites only</div>
-    </div>
-
-    <div class="count-row">
-      <span id="countLabel">Loading saved items…</span>
-      <a id="loadMoreLink" style="display:none;">Load more from Reddit →</a>
-    </div>
-
-    <div class="grid" id="grid"></div>
-    <div class="empty" id="emptyState" style="display:none;">
-      <p class="word">🌙</p>
-      <p>Nothing here yet. Try a different filter, or save something new on Reddit.</p>
-    </div>
-  </div>
-  </div><!-- /panel-reddit -->
-
-  <!-- ===================== STORY SAVER PANEL ===================== -->
-  <div id="panel-story" style="display:none;">
-    <div class="card" style="margin-bottom:22px;">
-      <h2>Story saver</h2>
-      <p class="hint">
-        There's no real "Instagram story downloader" to build honestly here — Instagram has no public API for stories,
-        and the tools that claim to do it work by replaying a logged-in session against private endpoints, which breaks
-        constantly and isn't something worth shipping. What actually works, statically, with no login and no scraping:
-        paste the <b>direct media link</b> of something you can already see (on desktop, right-click the photo or video
-        → <i>Copy image address</i> / <i>Copy video address</i>), and Lunavault will preview it and try to save it.
-      </p>
-      <div class="field">
-        <label>Direct media URL</label>
-        <input type="text" id="storyUrl" placeholder="https://scontent...cdninstagram.com/...">
-      </div>
-      <button class="btn-primary" id="addStoryBtn">Add to queue</button>
-    </div>
-
-    <div class="grid" id="storyQueue"></div>
-    <div class="empty" id="storyEmpty">
-      <p class="word">🌙</p>
-      <p>Nothing queued yet. Paste a direct media link above to preview and save it.</p>
-    </div>
+  <div class="controls">
+    <input type="text" id="search" placeholder="Search links, platforms, or tags…">
+    <select id="platformFilter"><option value="">All platforms</option></select>
+    <select id="typeFilter">
+      <option value="">Posts &amp; stories</option>
+      <option value="post">Posts only</option>
+      <option value="story">Stories only</option>
+    </select>
+    <select id="sortBy">
+      <option value="new">Newest first</option>
+      <option value="old">Oldest first</option>
+      <option value="platform">Platform A–Z</option>
+    </select>
+    <div class="chip-toggle" id="favToggle">★ Favorites only</div>
   </div>
 
-  <footer></footer>
+  <div class="count-row">
+    <span id="countLabel">Nothing saved yet</span>
+    <a id="clearAll" style="display:none;">Clear entire vault</a>
+  </div>
+
+  <div id="folders"></div>
+  <div class="empty" id="emptyState">
+    <p class="word">🌙</p>
+    <p>Your vault is empty. Paste a link above to save your first post or story.</p>
+  </div>
+
+  <footer>Lunavault — everything stays saved in your browser, nothing leaves your device.</footer>
 </div>
 
 <script>
 (function(){
-  "use strict";
+"use strict";
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const lerp = (a,b,t) => a + (b-a)*t;
 
-  const REDDIT_AUTH = "https://www.reddit.com/api/v1/authorize";
-  const REDDIT_API = "https://oauth.reddit.com";
-  const SCOPES = "identity history save";
-  const LS_CLIENT_ID = "lunavault_client_id";
-  const LS_META = "lunavault_meta_v1";
-  const SS_TOKEN = "lunavault_token";
-  const SS_STATE = "lunavault_oauth_state";
+/* ======================= MOON PHASE RENDERER ======================= */
+// p in [-1, 1]; 0 = full moon (centered), ±1 = new moon (edges)
+function drawMoon(ctx, size, p, craterSeed){
+  ctx.clearRect(0,0,size,size);
+  const cx = size/2, cy = size/2, r = size*0.38;
 
-  const $ = (id) => document.getElementById(id);
+  // soft halo
+  const halo = ctx.createRadialGradient(cx,cy,r*0.8,cx,cy,r*1.9);
+  halo.addColorStop(0, "rgba(215,218,233,.35)");
+  halo.addColorStop(1, "rgba(215,218,233,0)");
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(cx,cy,r*1.9,0,Math.PI*2); ctx.fill();
 
-  // ---------- redirect URI defaults ----------
-  const redirectUri = location.origin + location.pathname;
-  $("redirectUri").value = redirectUri;
-  $("clientId").value = localStorage.getItem(LS_CLIENT_ID) || "";
+  // lit disc
+  const body = ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,r*0.1,cx,cy,r);
+  body.addColorStop(0, "#f2f1ea");
+  body.addColorStop(.55, "#dcdae6");
+  body.addColorStop(1, "#b9bcd6");
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.clip();
+  ctx.fillStyle = body;
+  ctx.fillRect(cx-r,cy-r,r*2,r*2);
 
-  function showError(msg){
-    $("errorSlot").innerHTML = '<div class="error-box">' + msg + '</div>';
+  // craters (subtle, seeded so they stay fixed)
+  const rand = mulberry32(craterSeed);
+  ctx.globalAlpha = .18;
+  for(let i=0;i<7;i++){
+    const a = rand()*Math.PI*2, d = rand()*r*0.75, cr = r*(0.06+rand()*0.09);
+    ctx.beginPath();
+    ctx.fillStyle = "#8f93b0";
+    ctx.arc(cx+Math.cos(a)*d, cy+Math.sin(a)*d, cr, 0, Math.PI*2);
+    ctx.fill();
   }
+  ctx.globalAlpha = 1;
+  ctx.restore();
 
-  // ---------- OAuth kickoff ----------
-  $("connectBtn").addEventListener("click", function(){
-    const clientId = $("clientId").value.trim();
-    if(!clientId){ showError("Enter your Reddit app's Client ID first."); return; }
-    localStorage.setItem(LS_CLIENT_ID, clientId);
-    const state = Math.random().toString(36).slice(2) + Date.now();
-    sessionStorage.setItem(SS_STATE, state);
-    const url = REDDIT_AUTH + "?" + new URLSearchParams({
-      client_id: clientId,
-      response_type: "token",
-      state: state,
-      redirect_uri: redirectUri,
-      duration: "temporary",
-      scope: SCOPES
-    }).toString();
-    location.href = url;
-  });
+  // terminator shadow — punches a transparent hole to reveal the page behind
+  const dir = p >= 0 ? 1 : -1;
+  const k = 1 - Math.min(1, Math.abs(p));   // 1 = full moon, 0 = new moon
+  const dx = k * r * 2.05 * dir;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.clip();
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.beginPath();
+  ctx.arc(cx + dx, cy, r*1.02, 0, Math.PI*2);
+  ctx.fillStyle = "rgba(0,0,0,1)";
+  ctx.fill();
+  ctx.restore();
 
-  $("disconnectBtn") && $("disconnectBtn").addEventListener("click", function(){
-    sessionStorage.removeItem(SS_TOKEN);
-    location.href = redirectUri;
-  });
+  // rim light
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle = "rgba(255,255,255,.15)"; ctx.lineWidth = 1; ctx.stroke();
+}
+function mulberry32(a){
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
-  // ---------- parse token from hash on return ----------
-  function tryConsumeHashToken(){
-    if(location.hash && location.hash.indexOf("access_token") !== -1){
-      const params = new URLSearchParams(location.hash.slice(1));
-      const token = params.get("access_token");
-      const state = params.get("state");
-      const expiresIn = parseInt(params.get("expires_in") || "3600", 10);
-      const expectedState = sessionStorage.getItem(SS_STATE);
-      history.replaceState(null, "", redirectUri);
-      if(!token) return false;
-      if(expectedState && state !== expectedState){
-        showError("Login could not be verified (state mismatch). Please try connecting again.");
-        return false;
-      }
-      sessionStorage.setItem(SS_TOKEN, JSON.stringify({
-        token: token,
-        expires: Date.now() + (expiresIn - 60) * 1000
-      }));
-      return true;
-    }
-    return false;
+/* ======================= STARFIELD ======================= */
+function makeStarfield(canvas, count){
+  const ctx = canvas.getContext("2d");
+  let w=0,h=0,stars=[];
+  function resize(){
+    w = canvas.clientWidth; h = canvas.clientHeight;
+    canvas.width = w * devicePixelRatio; canvas.height = h * devicePixelRatio;
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+    stars = Array.from({length:count}, () => ({
+      x: Math.random()*w, y: Math.random()*h,
+      r: Math.random()*1.5+0.4,
+      a: Math.random()*0.5+0.25,
+      phase: Math.random()*Math.PI*2,
+      speed: Math.random()*1.2+0.4,
+      depth: Math.random()*0.6+0.2
+    }));
   }
-
-  function getToken(){
-    const raw = sessionStorage.getItem(SS_TOKEN);
-    if(!raw) return null;
-    try{
-      const data = JSON.parse(raw);
-      if(Date.now() > data.expires){ sessionStorage.removeItem(SS_TOKEN); return null; }
-      return data.token;
-    }catch(e){ return null; }
-  }
-
-  async function redditGet(path, params){
-    const token = getToken();
-    if(!token) throw new Error("no-token");
-    const url = REDDIT_API + path + (params ? "?" + new URLSearchParams(params).toString() : "");
-    const res = await fetch(url, { headers:{ "Authorization":"Bearer " + token } });
-    if(res.status === 401 || res.status === 403){ throw new Error("auth-failed"); }
-    if(!res.ok){ throw new Error("http-" + res.status); }
-    return res.json();
-  }
-
-  async function redditPost(path, form){
-    const token = getToken();
-    const res = await fetch(REDDIT_API + path, {
-      method:"POST",
-      headers:{
-        "Authorization":"Bearer " + token,
-        "Content-Type":"application/x-www-form-urlencoded"
-      },
-      body: new URLSearchParams(form).toString()
-    });
-    return res.ok;
-  }
-
-  // ---------- local metadata (tags / favorites) ----------
-  function loadMeta(){
-    try{ return JSON.parse(localStorage.getItem(LS_META)) || {}; }catch(e){ return {}; }
-  }
-  function saveMeta(meta){ localStorage.setItem(LS_META, JSON.stringify(meta)); }
-  let meta = loadMeta();
-
-  // ---------- state ----------
-  let username = "";
-  let items = [];       // normalized saved items
-  let after = null;
-  let doneFetching = false;
-
-  function normalize(child){
-    const k = child.kind; // t3 = post, t1 = comment
-    const d = child.data;
-    const isPost = k === "t3";
-    return {
-      id: d.name, // fullname, e.g. t3_xxx
-      type: isPost ? "post" : "comment",
-      subreddit: d.subreddit,
-      title: isPost ? d.title : ("Comment on: " + (d.link_title || "a post")),
-      snippet: isPost ? (d.selftext ? d.selftext.slice(0,180) : "") : (d.body || "").slice(0,220),
-      permalink: "https://www.reddit.com" + d.permalink,
-      score: d.score || 0,
-      created: d.created_utc || 0,
-      author: d.author || "[deleted]"
-    };
-  }
-
-  async function fetchPage(){
-    const data = await redditGet("/user/" + username + "/saved", {
-      limit: 100,
-      after: after || undefined
-    });
-    const children = (data.data && data.data.children) || [];
-    items = items.concat(children.map(normalize));
-    after = data.data.after;
-    if(!after) doneFetching = true;
-  }
-
-  function uniqueSubreddits(){
-    const set = new Set(items.map(i => i.subreddit));
-    return Array.from(set).sort((a,b)=>a.localeCompare(b));
-  }
-
-  function populateSubredditFilter(){
-    const sel = $("subredditFilter");
-    const current = sel.value;
-    sel.innerHTML = '<option value="">All subreddits</option>' +
-      uniqueSubreddits().map(s => '<option value="'+s+'">r/'+s+'</option>').join("");
-    sel.value = current;
-  }
-
-  function matchesFilters(item){
-    const q = $("search").value.trim().toLowerCase();
-    const sr = $("subredditFilter").value;
-    const type = $("typeFilter").value;
-    const favOnly = $("favToggle").classList.contains("active");
-    const m = meta[item.id] || {};
-    if(sr && item.subreddit !== sr) return false;
-    if(type && item.type !== type) return false;
-    if(favOnly && !m.favorite) return false;
-    if(q){
-      const tagStr = (m.tags || []).join(" ").toLowerCase();
-      const hay = (item.title + " " + item.subreddit + " " + tagStr).toLowerCase();
-      if(hay.indexOf(q) === -1) return false;
-    }
-    return true;
-  }
-
-  function sortItems(list){
-    const mode = $("sortBy").value;
-    const copy = list.slice();
-    if(mode === "saved_asc") copy.reverse();
-    else if(mode === "score_desc") copy.sort((a,b)=>b.score - a.score);
-    else if(mode === "subreddit") copy.sort((a,b)=>a.subreddit.localeCompare(b.subreddit));
-    return copy;
-  }
-
-  function render(){
-    populateSubredditFilter();
-    const filtered = sortItems(items.filter(matchesFilters));
-    const grid = $("grid");
-    grid.innerHTML = "";
-    $("emptyState").style.display = filtered.length ? "none" : "block";
-
-    filtered.forEach(item => {
-      const m = meta[item.id] || { tags: [], favorite: false };
-      const el = document.createElement("div");
-      el.className = "post";
-      const date = item.created ? new Date(item.created * 1000).toLocaleDateString() : "";
-      el.innerHTML =
-        '<div class="post-meta"><span><span class="sr">r/'+esc(item.subreddit)+'</span> · '+item.type+'</span><span>'+date+'</span></div>' +
-        '<p class="post-title"><a href="'+item.permalink+'" target="_blank" rel="noopener">'+esc(item.title)+'</a></p>' +
-        (item.snippet ? '<p class="post-snip">'+esc(item.snippet)+(item.snippet.length>=180?'…':'')+'</p>' : '') +
-        '<div class="post-tags">' + (m.tags||[]).map(t=>'<span class="tagchip">'+esc(t)+'</span>').join("") + '</div>' +
-        '<div class="post-actions">' +
-          '<button class="icon-btn fav '+(m.favorite?'on':'')+'" data-act="fav">'+(m.favorite?'★ Favorited':'☆ Favorite')+'</button>' +
-          '<input class="tag-input" placeholder="add tag…" data-act="tag">' +
-          '<button class="icon-btn" data-act="unsave">Unsave</button>' +
-        '</div>';
-
-      el.querySelector('[data-act="fav"]').addEventListener("click", () => {
-        meta[item.id] = meta[item.id] || {tags:[], favorite:false};
-        meta[item.id].favorite = !meta[item.id].favorite;
-        saveMeta(meta); render();
-      });
-      el.querySelector('[data-act="tag"]').addEventListener("keydown", (e) => {
-        if(e.key === "Enter" && e.target.value.trim()){
-          meta[item.id] = meta[item.id] || {tags:[], favorite:false};
-          meta[item.id].tags.push(e.target.value.trim());
-          saveMeta(meta); render();
-        }
-      });
-      el.querySelector('[data-act="unsave"]').addEventListener("click", async () => {
-        const ok = demoMode ? true : await redditPost("/api/unsave", { id: item.id });
-        if(ok){
-          items = items.filter(i => i.id !== item.id);
-          delete meta[item.id]; saveMeta(meta);
-          render();
-        }
-      });
-
-      grid.appendChild(el);
-    });
-
-    $("countLabel").textContent = filtered.length + " of " + items.length + " saved item" + (items.length===1?"":"s") + " shown";
-    $("loadMoreLink").style.display = doneFetching ? "none" : "inline";
-  }
-
-  function esc(s){
-    return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  }
-
-  ["search","subredditFilter","typeFilter","sortBy"].forEach(id => {
-    $(id).addEventListener("input", render);
-    $(id).addEventListener("change", render);
-  });
-  $("favToggle").addEventListener("click", () => {
-    $("favToggle").classList.toggle("active");
-    render();
-  });
-  $("loadMoreLink").addEventListener("click", async () => {
-    $("countLabel").textContent = "Loading more…";
-    await fetchPage();
-    render();
-  });
-  $("exportBtn").addEventListener("click", () => {
-    const out = items.map(i => Object.assign({}, i, { meta: meta[i.id] || {} }));
-    const blob = new Blob([JSON.stringify(out, null, 2)], {type:"application/json"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "lunavault-export.json";
-    a.click();
-  });
-
-  // ---------- tabs ----------
-  document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      const tab = btn.dataset.tab;
-      $("panel-reddit").style.display = tab === "reddit" ? "block" : "none";
-      $("panel-story").style.display = tab === "story" ? "block" : "none";
-    });
-  });
-
-  // ---------- skip / demo mode ----------
-  let demoMode = false;
-  const DEMO_ITEMS = [
-    { id:"demo_1", type:"post", subreddit:"spaceporn", title:"The Vela supernova remnant, 6 hours exposure", snippet:"Shot from my backyard over three nights — still can't believe how much detail came through.", permalink:"https://reddit.com", score:4210, created: Date.now()/1000 - 3600*5, author:"demo" },
-    { id:"demo_2", type:"comment", subreddit:"AskEngineers", title:"Comment on: Why do PID loops oscillate at high gain?", snippet:"Because you're feeding derivative noise back into the actuator faster than the plant can respond…", permalink:"https://reddit.com", score:312, created: Date.now()/1000 - 3600*30, author:"demo" },
-    { id:"demo_3", type:"post", subreddit:"embedded", title:"Finally got I2C stable on my ESP8266 OLED build", snippet:"Turned out to be a pull-up resistor issue the whole time. Classic.", permalink:"https://reddit.com", score:98, created: Date.now()/1000 - 3600*80, author:"demo" },
-    { id:"demo_4", type:"post", subreddit:"dataisbeautiful", title:"[OC] Ten years of my own sleep data, visualized", snippet:"", permalink:"https://reddit.com", score:1560, created: Date.now()/1000 - 3600*140, author:"demo" }
-  ];
-  $("skipBtn").addEventListener("click", () => {
-    demoMode = true;
-    items = DEMO_ITEMS.slice();
-    username = "";
-    $("whoLine").innerHTML = 'Browsing <b>demo data</b> — <a id="exitDemo" style="color:var(--glow); cursor:pointer; text-decoration:none; border-bottom:1px solid var(--glow-dim);">connect Reddit</a> anytime';
-    $("connect").style.display = "none";
-    $("app").style.display = "block";
-    render();
-    document.getElementById("exitDemo").addEventListener("click", () => {
-      demoMode = false; items = [];
-      $("app").style.display = "none";
-      $("connect").style.display = "block";
-    });
-  });
-
-  // ---------- story saver ----------
-  const LS_STORY = "lunavault_story_queue";
-  function loadStoryQueue(){ try{ return JSON.parse(localStorage.getItem(LS_STORY)) || []; }catch(e){ return []; } }
-  function saveStoryQueue(q){ localStorage.setItem(LS_STORY, JSON.stringify(q)); }
-  let storyQueue = loadStoryQueue();
-
-  function isVideoUrl(url){ return /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url); }
-
-  function renderStoryQueue(){
-    const grid = $("storyQueue");
-    grid.innerHTML = "";
-    $("storyEmpty").style.display = storyQueue.length ? "none" : "block";
-    storyQueue.forEach(item => {
-      const el = document.createElement("div");
-      el.className = "post";
-      const mediaTag = isVideoUrl(item.url)
-        ? '<video class="story-media" src="'+item.url+'" controls></video>'
-        : '<img class="story-media" src="'+item.url+'" alt="" onerror="this.style.display=\'none\'">';
-      el.innerHTML =
-        mediaTag +
-        '<p class="post-snip" style="word-break:break-all;">'+esc(item.url)+'</p>' +
-        '<div class="post-actions">' +
-          '<button class="icon-btn" data-act="dl">Download</button>' +
-          '<button class="icon-btn" data-act="open">Open original</button>' +
-          '<button class="icon-btn" data-act="rm">Remove</button>' +
-        '</div>';
-      el.querySelector('[data-act="dl"]').addEventListener("click", async () => {
-        try{
-          const res = await fetch(item.url, { mode:"cors" });
-          if(!res.ok) throw new Error("bad response");
-          const blob = await res.blob();
-          const ext = isVideoUrl(item.url) ? "mp4" : "jpg";
-          const a = document.createElement("a");
-          a.href = URL.createObjectURL(blob);
-          a.download = "lunavault-story-" + item.id + "." + ext;
-          a.click();
-        }catch(e){
-          // cross-origin server won't allow a fetched download — fall back to opening it
-          window.open(item.url, "_blank", "noopener");
-        }
-      });
-      el.querySelector('[data-act="open"]').addEventListener("click", () => window.open(item.url, "_blank", "noopener"));
-      el.querySelector('[data-act="rm"]').addEventListener("click", () => {
-        storyQueue = storyQueue.filter(i => i.id !== item.id);
-        saveStoryQueue(storyQueue); renderStoryQueue();
-      });
-      grid.appendChild(el);
-    });
-  }
-
-  $("addStoryBtn").addEventListener("click", () => {
-    const url = $("storyUrl").value.trim();
-    if(!url) return;
-    storyQueue.unshift({ id: Date.now().toString(36), url: url });
-    saveStoryQueue(storyQueue);
-    $("storyUrl").value = "";
-    renderStoryQueue();
-  });
-  renderStoryQueue();
-
-  // ---------- intro splash ----------
-  (function initSplash(){
-    const splash = document.getElementById("splash");
-    const vid = document.getElementById("introVid");
-    const skip = document.getElementById("skipIntro");
-    if(!splash) return;
-    const dismiss = () => {
-      splash.classList.add("hide");
-      setTimeout(() => { splash.style.display = "none"; }, 750);
-    };
-    // never replay the intro for a returning visitor in the same session
-    if(sessionStorage.getItem("lunavault_intro_seen")){
-      splash.style.display = "none";
-      return;
-    }
-    sessionStorage.setItem("lunavault_intro_seen", "1");
-    vid && vid.addEventListener("ended", dismiss);
-    skip && skip.addEventListener("click", dismiss);
-    vid && vid.addEventListener("error", dismiss);
-    // safety timeout in case the video fails to load
-    setTimeout(dismiss, 8000);
-  })();
-
-  async function boot(){
-    tryConsumeHashToken();
-    const token = getToken();
-    if(!token){
-      $("connect").style.display = "block";
-      $("app").style.display = "none";
-      return;
-    }
-    $("connect").style.display = "none";
-    $("app").style.display = "block";
-    try{
-      const me = await redditGet("/api/v1/me");
-      username = me.name;
-      $("whoUser").textContent = "u/" + username;
-      await fetchPage();
-      render();
-    }catch(e){
-      sessionStorage.removeItem(SS_TOKEN);
-      $("connect").style.display = "block";
-      $("app").style.display = "none";
-      showError("Your session expired or the connection failed. Please connect again.");
+  new ResizeObserver(resize).observe(canvas);
+  resize();
+  function draw(t, parX, parY){
+    ctx.clearRect(0,0,w,h);
+    for(const s of stars){
+      const tw = 0.55 + 0.45*Math.sin(s.phase + t*0.001*s.speed);
+      const ox = parX * 18 * s.depth, oy = parY * 18 * s.depth;
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(215,218,233," + (s.a*tw) + ")";
+      ctx.arc(s.x+ox, s.y+oy, s.r, 0, Math.PI*2);
+      ctx.fill();
     }
   }
+  return { draw };
+}
 
-  boot();
+const mainStars = makeStarfield($("starfield"), 160);
+const splashStars = makeStarfield($("splashStars"), 130);
+
+let mouseX = window.innerWidth/2, mouseY = window.innerHeight/2;
+let parX = 0, parY = 0;
+window.addEventListener("mousemove", e => { mouseX = e.clientX; mouseY = e.clientY; });
+window.addEventListener("touchmove", e => { if(e.touches[0]){ mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY; } }, {passive:true});
+
+const dockCtx = $("dockCanvas").getContext("2d");
+const introCtx = $("introCanvas").getContext("2d");
+let introPhaseOverride = null; // during intro reveal, phase is time-driven, not mouse-driven
+
+function frame(t){
+  const targetParX = (mouseX/window.innerWidth - 0.5) * 2;
+  const targetParY = (mouseY/window.innerHeight - 0.5) * 2;
+  parX = lerp(parX, targetParX, 0.04);
+  parY = lerp(parY, targetParY, 0.04);
+
+  mainStars.draw(t, parX, parY);
+  splashStars.draw(t, parX*0.5, parY*0.5);
+
+  const cursorPhase = clamp((mouseX/window.innerWidth - 0.5) * 2.1, -1, 1);
+  drawMoon(dockCtx, 168, cursorPhase, 7);
+
+  const introPhase = introPhaseOverride !== null ? introPhaseOverride : cursorPhase;
+  drawMoon(introCtx, 520, introPhase, 7);
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ======================= INTRO SEQUENCE ======================= */
+(function initIntro(){
+  const splash = $("splash");
+  const moonWrap = $("introMoonWrap");
+  const word = $("introWord");
+  const line = $("introLine");
+  const tag = $("introTag");
+  const hint = $("introHint");
+  const dock = $("dockMoon");
+  const skip = $("skipIntro");
+  let dismissed = false;
+
+  // time-driven reveal: new moon -> full moon over ~2.4s
+  const start = performance.now();
+  const REVEAL_MS = 2400;
+  function tick(now){
+    const t = clamp((now-start)/REVEAL_MS, 0, 1);
+    const eased = 1 - Math.pow(1-t, 3);
+    introPhaseOverride = lerp(-1, 0, eased); // new -> full
+    if(t < 1 && !dismissed) requestAnimationFrame(tick);
+    else introPhaseOverride = null; // hand control to cursor
+  }
+  requestAnimationFrame(tick);
+
+  setTimeout(() => moonWrap.classList.add("in"), 80);
+  setTimeout(() => hint.classList.add("in"), 900);
+  setTimeout(() => word.classList.add("in"), 1500);
+  setTimeout(() => line.classList.add("in"), 2100);
+  setTimeout(() => tag.classList.add("in"), 2500);
+
+  function dismiss(){
+    if(dismissed) return;
+    dismissed = true;
+    introPhaseOverride = null;
+    moonWrap.classList.add("dock");
+    splash.classList.add("hide");
+    dock.classList.add("show");
+    setTimeout(() => { splash.style.display = "none"; }, 950);
+  }
+  skip.addEventListener("click", dismiss);
+  setTimeout(dismiss, 5400); // plays in full every visit, then docks
+})();
+
+/* ======================= THE VAULT ======================= */
+const PLATFORMS = [
+  { key:"instagram", label:"Instagram", icon:"📸", match:["instagram.com"] },
+  { key:"reddit",    label:"Reddit",    icon:"🪐", match:["reddit.com","redd.it"] },
+  { key:"x",         label:"X / Twitter", icon:"𝕏", match:["twitter.com","x.com"] },
+  { key:"tiktok",    label:"TikTok",    icon:"🎵", match:["tiktok.com"] },
+  { key:"pinterest", label:"Pinterest", icon:"📌", match:["pinterest."] },
+  { key:"facebook",  label:"Facebook",  icon:"📘", match:["facebook.com","fb.watch"] },
+  { key:"youtube",   label:"YouTube",   icon:"▶️", match:["youtube.com","youtu.be"] },
+  { key:"threads",   label:"Threads",   icon:"🧵", match:["threads.net"] },
+  { key:"snapchat",  label:"Snapchat",  icon:"👻", match:["snapchat.com"] },
+  { key:"linkedin",  label:"LinkedIn",  icon:"💼", match:["linkedin.com"] },
+  { key:"tumblr",    label:"Tumblr",    icon:"🌙", match:["tumblr.com"] },
+  { key:"vimeo",     label:"Vimeo",     icon:"🎬", match:["vimeo.com"] }
+];
+const OTHER = { key:"other", label:"Other links", icon:"🔗" };
+
+function detectPlatform(url){
+  try{
+    const host = new URL(url).hostname.toLowerCase();
+    for(const p of PLATFORMS){ if(p.match.some(m => host.includes(m))) return p; }
+  }catch(e){ /* not a valid URL yet */ }
+  return OTHER;
+}
+function detectType(url){
+  try{ return /stor(y|ies)/i.test(new URL(url).pathname) ? "story" : "post"; }
+  catch(e){ return "post"; }
+}
+function esc(s){ return String(s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+const LS_VAULT = "lunavault_items_v1";
+function loadVault(){ try{ return JSON.parse(localStorage.getItem(LS_VAULT)) || []; }catch(e){ return []; } }
+function saveVault(v){ localStorage.setItem(LS_VAULT, JSON.stringify(v)); }
+let vault = loadVault();
+
+let chosenType = "post";
+let typeOverridden = false;
+document.querySelectorAll(".type-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    typeOverridden = true;
+    document.querySelectorAll(".type-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    chosenType = btn.dataset.type;
+  });
+});
+function setTypeToggle(type){
+  chosenType = type;
+  document.querySelectorAll(".type-btn").forEach(b => b.classList.toggle("active", b.dataset.type === type));
+}
+
+$("vaultUrl").addEventListener("input", () => {
+  const url = $("vaultUrl").value.trim();
+  if(!url){ $("detectLine").innerHTML = "Paste a link above — Lunavault will guess the platform for you."; return; }
+  const plat = detectPlatform(url);
+  const guess = detectType(url);
+  if(!typeOverridden) setTypeToggle(guess);
+  $("detectLine").innerHTML = "Detected: " + plat.icon + " <b>" + plat.label + "</b> · saving as a <b>" + chosenType + "</b>";
+});
+
+$("addBtn").addEventListener("click", () => {
+  const url = $("vaultUrl").value.trim();
+  if(!url) return;
+  const plat = detectPlatform(url);
+  vault.unshift({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    url, platform: plat.key, type: chosenType, favorite:false, tags:[], addedAt: Date.now()
+  });
+  saveVault(vault);
+  $("vaultUrl").value = "";
+  typeOverridden = false;
+  setTypeToggle("post");
+  $("detectLine").innerHTML = "Saved to " + plat.icon + " " + plat.label + ".";
+  render();
+});
+
+function platformMeta(key){ return PLATFORMS.find(p => p.key===key) || OTHER; }
+
+function matches(item){
+  const q = $("search").value.trim().toLowerCase();
+  const platF = $("platformFilter").value;
+  const typeF = $("typeFilter").value;
+  const favOnly = $("favToggle").classList.contains("active");
+  if(platF && item.platform !== platF) return false;
+  if(typeF && item.type !== typeF) return false;
+  if(favOnly && !item.favorite) return false;
+  if(q){
+    const hay = (item.url + " " + platformMeta(item.platform).label + " " + item.tags.join(" ")).toLowerCase();
+    if(hay.indexOf(q) === -1) return false;
+  }
+  return true;
+}
+
+function populatePlatformFilter(){
+  const present = Array.from(new Set(vault.map(i => i.platform)));
+  const sel = $("platformFilter");
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All platforms</option>' +
+    present.map(k => { const m = platformMeta(k); return '<option value="'+k+'">'+m.icon+' '+m.label+'</option>'; }).join("");
+  sel.value = cur;
+}
+
+function renderItemCard(item){
+  const el = document.createElement("div");
+  el.className = "item";
+  el.innerHTML =
+    '<div class="item-meta"><span class="badge '+item.type+'">'+item.type+'</span><span>'+new Date(item.addedAt).toLocaleDateString()+'</span></div>' +
+    '<div class="item-url"><a href="'+esc(item.url)+'" target="_blank" rel="noopener">'+esc(item.url)+'</a></div>' +
+    '<div class="item-tags">'+item.tags.map(t=>'<span class="tagchip">'+esc(t)+'</span>').join("")+'</div>' +
+    '<div class="item-actions">' +
+      '<button class="icon-btn fav '+(item.favorite?'on':'')+'" data-act="fav">'+(item.favorite?'★ Favorited':'☆ Favorite')+'</button>' +
+      '<input class="tag-input" placeholder="add tag…" data-act="tag">' +
+      '<button class="icon-btn" data-act="rm">Remove</button>' +
+    '</div>';
+  el.querySelector('[data-act="fav"]').addEventListener("click", () => {
+    item.favorite = !item.favorite; saveVault(vault); render();
+  });
+  el.querySelector('[data-act="tag"]').addEventListener("keydown", e => {
+    if(e.key === "Enter" && e.target.value.trim()){
+      item.tags.push(e.target.value.trim()); saveVault(vault); render();
+    }
+  });
+  el.querySelector('[data-act="rm"]').addEventListener("click", () => {
+    vault = vault.filter(i => i.id !== item.id); saveVault(vault); render();
+  });
+  return el;
+}
+
+function render(){
+  populatePlatformFilter();
+  const filtered = vault.filter(matches);
+  const sortMode = $("sortBy").value;
+  filtered.sort((a,b) => {
+    if(sortMode==="old") return a.addedAt-b.addedAt;
+    if(sortMode==="platform") return platformMeta(a.platform).label.localeCompare(platformMeta(b.platform).label);
+    return b.addedAt-a.addedAt;
+  });
+
+  const foldersEl = $("folders");
+  foldersEl.innerHTML = "";
+  $("emptyState").style.display = vault.length ? "none" : "block";
+  $("clearAll").style.display = vault.length ? "inline" : "none";
+
+  const groups = {};
+  filtered.forEach(i => { (groups[i.platform] = groups[i.platform] || []).push(i); });
+
+  const order = PLATFORMS.map(p=>p.key).concat(["other"]);
+  order.forEach(key => {
+    const list = groups[key];
+    if(!list || !list.length) return; // never render an empty folder
+    const meta = platformMeta(key);
+    const details = document.createElement("details");
+    details.className = "folder"; details.open = true;
+    details.innerHTML = '<summary>'+meta.icon+' '+meta.label+' <span class="count">('+list.length+')</span><span class="chev">›</span></summary><div class="grid"></div>';
+    const grid = details.querySelector(".grid");
+    list.forEach(item => grid.appendChild(renderItemCard(item)));
+    foldersEl.appendChild(details);
+  });
+
+  const totalShown = filtered.length;
+  $("countLabel").textContent = vault.length
+    ? (totalShown + " of " + vault.length + " item" + (vault.length===1?"":"s") + " shown")
+    : "Nothing saved yet";
+}
+
+["search","platformFilter","typeFilter","sortBy"].forEach(id => {
+  $(id).addEventListener("input", render);
+  $(id).addEventListener("change", render);
+});
+$("favToggle").addEventListener("click", () => { $("favToggle").classList.toggle("active"); render(); });
+$("exportBtn").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(vault, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "lunavault-export.json"; a.click();
+});
+$("clearAll").addEventListener("click", () => {
+  if(confirm("Clear everything saved in your vault? This can't be undone.")){
+    vault = []; saveVault(vault); render();
+  }
+});
+
+render();
 })();
 </script>
 </body>
